@@ -1,1 +1,9 @@
+# macOS
 .DS_Store
+
+# JetBrains
+.idea
+cmake-build-*
+
+# Images
+images/*
