@@ -5,19 +5,19 @@
 
 
 int main() {
-    auto image = std::make_shared<Image>("images/originals/chickpeas.gif");
+    auto image = std::make_shared<Image>("images/originals/strawberries2.gif");
 
-    int w = 1920, h = 1080;
+    int w = 512, h = 512;
     auto canvas = std::make_shared<Canvas>(w, h);
 
-    for (int y = 0; y < canvas->h; y += 50) {
-        for (int x = 0; x < canvas->w; x += 50) {
+    for (int y = 0; y < canvas->h; y += rand() % 20 + 100) {
+        for (int x = 0; x < canvas->w; x += rand() % 20 + 100) {
             auto patch = std::make_shared<Patch>(image, x, y);
             canvas->apply(patch);
         }
     }
 
-    canvas->write("images/outputs/chickpeas.png");
+    canvas->write("images/outputs/strawberries2.png");
 
     return 0;
 }

@@ -104,12 +104,17 @@ private:
 public:
     Canvas(int w, int h): Image(w, h), origin(w * h) {}
 
+    [[nodiscard]] inline bool in_range(int x, int y) const {
+        return 0 <= x and x < w and 0 <= y and y < h;
+    }
+
     void apply(const std::shared_ptr<Patch> &patch) {
         int x_end = std::min(patch->x_end(), w);
         int y_end = std::min(patch->y_end(), h);
 
         // Fill non-overlapped area first
         std::vector<std::pair<int, int>> overlapped;
+        std::vector<int> overlapped_index(w * h, -1);
         for (int y = patch->y; y < y_end; ++ y) {
             for (int x = patch->x; x < x_end; ++ x) {
                 int index = y * w + x;
@@ -117,6 +122,7 @@ public:
                     origin[index] = patch;
                     data[index] = patch->pixel(x, y);
                 } else {
+                    overlapped_index[index] = overlapped.size();
                     overlapped.emplace_back(x, y);
                 }
             }
@@ -124,20 +130,38 @@ public:
 
         // Build graph
         Graph graph(overlapped.size() + 2);
+        static int dx[4] = { 0,  0, -1, +1};
+        static int dy[4] = {-1, +1,  0,  0};
         int s = overlapped.size(), t = overlapped.size() + 1;
-        for (int y = patch->y; y < y_end - 1; ++ y) {
-            for (int x = patch->x; x < x_end - 1; ++ x) {
-                int index = y * w + x;
-                // TODO: Build graph
+        for (int i = 0; i < overlapped.size(); ++ i) {
+            auto [x, y] = overlapped[i];
+            int m_s = pixel(x, y).distance(patch->pixel(x, y));
+            for (int d = 0; d < 4; ++ d) {
+                int a = x + dx[d], b = y + dy[d];
+                int index = b * w + a;
+                if (in_range(a, b) and origin[index]) {
+                    if (origin[index] == patch) {
+                        graph.add_edge(i, t, Graph::inf_flow);
+                    } else {
+                        if (overlapped_index[index] == -1) {
+                            graph.add_edge(s, i, Graph::inf_flow);
+                        } else if (d & 1) { // `add_edge` is bi-directional
+                            int m_t = data[index].distance(patch->pixel(a, b));
+                            graph.add_edge(i, overlapped_index[index], m_s + m_t);
+                        }
+                    }
+                }
             }
         }
+        // std::cout << " > " << overlapped.size() << " overlapped pixels" << std::endl;
 
         // Min-cut and overwrite
+        // std::cout << " > Running min-cut algorithm ... " << std::endl;
         auto decisions = graph.min_cut(s, t);
         assert(decisions.size() == overlapped.size() + 2);
-        for (int i = 0; i < decisions.size(); ++ i) {
-            if (decisions[i]) { // Belongs to T
-                int x = overlapped[i].first, y = overlapped[i].second;
+        for (int i = 0; i < overlapped.size(); ++ i) {
+            if (decisions[i]) { // Belongs to the new patch
+                auto [x, y] = overlapped[i];
                 int index = y * w + x;
                 origin[index] = patch;
                 data[index] = patch->pixel(x, y);

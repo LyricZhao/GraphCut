@@ -4,8 +4,7 @@
 
 
 struct Edge {
-    int v, next;
-    int capacity, flow;
+    int v, next, capacity;
 };
 
 
@@ -14,16 +13,18 @@ private:
     std::vector<int> depth;
 
     bool dinic_bfs(int s, int t) {
-        depth.resize(head.size(), 0);
+        std::fill(depth.begin(), depth.end(), 0);
         depth[s] = 1;
         std::queue<int> queue;
         queue.push(s);
 
+        int count = 0;
         while (not queue.empty()) {
+            ++ count;
             int u = queue.front();
             queue.pop();
             for (int i = head[u]; i != -1; i = edges[i].next) {
-                if (not depth[edges[i].v] and edges[i].capacity > edges[i].flow) {
+                if (not depth[edges[i].v] and edges[i].capacity) {
                     depth[edges[i].v] = depth[u] + 1;
                     queue.push(edges[i].v);
                 }
@@ -37,22 +38,25 @@ private:
             return capacity;
         }
 
-        int total_flow = 0;
+        int flow, total_flow = 0;
         for (int i = head[u]; i != -1 and capacity > 0; i = edges[i].next) {
-            if (depth[edges[i].v] == depth[u] + 1) {
-                int flow = dinic_dfs(edges[i].v, t, std::min(capacity, edges[i].capacity - edges[i].flow));
-                edges[i].flow += flow;
-                edges[i ^ 1].flow -= flow;
+            if (depth[edges[i].v] == depth[u] + 1 and
+                (flow = dinic_dfs(edges[i].v, t, std::min(capacity, edges[i].capacity))) > 0) {
+                edges[i].capacity -= flow;
+                edges[i ^ 1].capacity += flow;
                 total_flow += flow;
                 capacity -= flow;
             }
+        }
+        if (not total_flow) {
+            depth[u] = 0;
         }
         return total_flow;
     }
 
     void dinic(int s, int t) {
         while (dinic_bfs(s, t)) {
-            while (dinic_dfs(s, t, INT32_MAX));
+            while (dinic_dfs(s, t, inf_flow));
         }
     }
 
@@ -68,7 +72,7 @@ private:
             queue.pop();
             decisions[u] = false;
             for (int i = head[u]; i != -1; i = edges[i].next) {
-                if (not visited[edges[i].v] and edges[i].capacity > edges[i].flow) {
+                if (not visited[edges[i].v] and edges[i].capacity) {
                     visited[edges[i].v] = true;
                     queue.push(edges[i].v);
                 }
@@ -81,15 +85,17 @@ public:
     std::vector<int> head;
     std::vector<Edge> edges;
 
-    explicit Graph(int n): head(n) {}
+    static constexpr int inf_flow = 1 << 20;
 
+    explicit Graph(int n): head(n, -1), depth(n) {}
+
+    /// Add a bi-directional edge
     void add_edge(int u, int v, int w) {
-        if (u >= head.size() or v > head.size()) {
-            head.resize(std::max(u, v), -1);
-        }
-        edges.push_back(Edge{v, head[u], w, 0});
+        assert(0 <= u and u < head.size());
+        assert(0 <= v and v < head.size());
+        edges.push_back(Edge{v, head[u], w});
         head[u] = edges.size() - 1;
-        edges.push_back(Edge{u, head[v], 0, 0});
+        edges.push_back(Edge{u, head[v], w});
         head[v] = edges.size() - 1;
     }
 
