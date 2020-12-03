@@ -113,6 +113,7 @@ public:
     }
 
     void apply(const std::shared_ptr<Patch> &patch) {
+        std::cout << " > Applying a new patch at (" << patch->x << ", " << patch->y << ")" << std::endl;
         int x_end = std::min(patch->x_end(), w);
         int y_end = std::min(patch->y_end(), h);
 
