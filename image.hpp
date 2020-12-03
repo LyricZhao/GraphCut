@@ -19,6 +19,13 @@ struct Pixel {
         int b_d = static_cast<int> (b) - pixel.b;
         return std::sqrt(r_d * r_d + g_d * g_d + b_d * b_d);
     }
+
+    [[nodiscard]] int sqr_distance(const Pixel &pixel) const {
+        int r_d = static_cast<int> (r) - pixel.r;
+        int g_d = static_cast<int> (g) - pixel.g;
+        int b_d = static_cast<int> (b) - pixel.b;
+        return r_d * r_d + g_d * g_d + b_d * b_d;
+    }
 };
 
 static_assert(sizeof(Pixel) == 3);
@@ -110,6 +117,25 @@ public:
 
     [[nodiscard]] inline bool in_range(int x, int y) const {
         return 0 <= x and x < w and 0 <= y and y < h;
+    }
+
+    [[nodiscard]] uint64_t ssd(const std::shared_ptr<Patch> &patch) const {
+        int x_end = std::min(patch->x_end(), w);
+        int y_end = std::min(patch->y_end(), h);
+
+        int overlapped = 0;
+        uint64_t ssd = 0;
+        for (int y = patch->y; y < y_end; ++ y) {
+            for (int x = patch->x; x < x_end; ++ x) {
+                int index = y * w + x;
+                if (origin[index]) {
+                    ssd += data[index].sqr_distance(patch->pixel(x, y));
+                    ++ overlapped;
+                }
+            }
+        }
+        assert(overlapped > 0);
+        return ssd / overlapped;
     }
 
     void apply(const std::shared_ptr<Patch> &patch) {

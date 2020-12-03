@@ -21,7 +21,12 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Begin to apply patches on canvas:" << std::endl;
     Placer::init(canvas, texture);
-    Placer::random(canvas, texture, 10);
+
+    // Refine
+    std::cout << "Begin to refine:" << std::endl;
+    for (int i = 0; i < 10; ++ i) {
+        Placer::entire_matching(canvas, texture);
+    }
 
     std::cout << "Writing result into " << argv[2] << " ..." << std::endl;
     canvas->write(argv[2]);
