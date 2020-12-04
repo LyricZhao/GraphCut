@@ -119,14 +119,20 @@ public:
         return 0 <= x and x < w and 0 <= y and y < h;
     }
 
-    [[nodiscard]] uint64_t ssd(const std::shared_ptr<Patch> &patch) const {
+    [[nodiscard]] uint64_t ssd(const std::shared_ptr<Patch> &patch, int canvas_x=-1, int canvas_y=-1, int sub_patch_w=-1, int sub_patch_h=-1) const {
+        int x_begin = std::max(patch->x, 0);
+        int y_begin = std::max(patch->y, 0);
         int x_end = std::min(patch->x_end(), w);
         int y_end = std::min(patch->y_end(), h);
+        if (canvas_x != -1 and canvas_y != -1 and sub_patch_w != -1 and sub_patch_h != -1) {
+            x_begin = canvas_x, y_begin = canvas_y;
+            x_end = std::min(x_end, x_begin + sub_patch_w), y_end = std::min(y_end, y_begin + sub_patch_h);
+        }
 
         int overlapped = 0;
         uint64_t ssd = 0;
-        for (int y = patch->y; y < y_end; ++ y) {
-            for (int x = patch->x; x < x_end; ++ x) {
+        for (int y = y_begin; y < y_end; ++ y) {
+            for (int x = x_begin; x < x_end; ++ x) {
                 int index = y * w + x;
                 if (origin[index]) {
                     ssd += data[index].sqr_distance(patch->pixel(x, y));
@@ -140,6 +146,8 @@ public:
 
     void apply(const std::shared_ptr<Patch> &patch) {
         std::cout << " > Applying a new patch at (" << patch->x << ", " << patch->y << ")" << std::endl;
+        int x_begin = std::max(patch->x, 0);
+        int y_begin = std::max(patch->y, 0);
         int x_end = std::min(patch->x_end(), w);
         int y_end = std::min(patch->y_end(), h);
 
@@ -149,8 +157,8 @@ public:
         int n_old_seam_nodes = 0;
         std::vector<std::pair<int, int>> overlapped;
         std::vector<int> overlapped_index(w * h, -1);
-        for (int y = patch->y; y < y_end; ++ y) {
-            for (int x = patch->x; x < x_end; ++ x) {
+        for (int y = y_begin; y < y_end; ++ y) {
+            for (int x = x_begin; x < x_end; ++ x) {
                 int index = y * w + x;
                 if (not origin[index]) {
                     origin[index] = patch;
