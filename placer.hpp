@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cherry.hpp"
+#include "dft.hpp"
 #include "image.hpp"
 
 

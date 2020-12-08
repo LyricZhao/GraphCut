@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <complex>
 #include <vector>
 
 #include "stb/stb_image.h"
@@ -12,6 +13,8 @@
 #pragma pack()
 struct Pixel {
     uint8_t r, g, b;
+
+    Pixel(uint8_t r, uint8_t g, uint8_t b): r(r), g(g), b(b) {}
 
     [[nodiscard]] int distance(const Pixel &pixel) const {
         int r_d = static_cast<int> (r) - pixel.r;
@@ -29,6 +32,46 @@ struct Pixel {
 };
 
 static_assert(sizeof(Pixel) == 3);
+
+
+#pragma pack()
+struct ComplexPixel {
+    std::complex<double> r, g, b;
+
+    ComplexPixel() = default;
+
+    ComplexPixel(uint8_t r_real, uint8_t g_real, uint8_t b_real): r(r_real), g(g_real), b(b_real) {}
+
+    ComplexPixel(double real, double image): r(real, image), g(real, image), b(real, image) {}
+
+    ComplexPixel(const std::complex<double> &r, const std::complex<double> &g, const std::complex<double> &b):
+            r(r), g(g), b(b) {}
+
+    friend ComplexPixel operator + (const ComplexPixel &x, const ComplexPixel &y) {
+        return ComplexPixel(x.r + y.r, x.g + y.g, x.b + y.b);
+    }
+
+    friend ComplexPixel operator - (const ComplexPixel &x, const ComplexPixel &y) {
+        return ComplexPixel(x.r - y.r, x.g - y.g, x.b - y.b);
+    }
+
+    friend ComplexPixel operator * (const ComplexPixel &x, const ComplexPixel &y) {
+        return ComplexPixel(x.r * y.r, x.g * y.g, x.b * y.b);
+    }
+
+    friend ComplexPixel operator / (const ComplexPixel &x, double k) {
+        return ComplexPixel(x.r / k, x.g / k, x.b / k);
+    }
+
+    friend ComplexPixel operator * (const ComplexPixel &x, double k) {
+        return ComplexPixel(x.r * k, x.g * k, x.b * k);
+    }
+};
+
+
+[[nodiscard]] ComplexPixel to_complex_pixel(const Pixel &x) {
+    return ComplexPixel(x.r, x.g, x.b);
+}
 
 
 class Image {
