@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
     // Refine
     std::cout << "Begin to refine:" << std::endl;
     for (int i = 0; i < 10; ++ i) {
-        Placer::sub_patch_matching(canvas, texture);
+        Placer::entire_matching(canvas, texture);
     }
 
     std::cout << "Writing result into " << argv[2] << " ..." << std::endl;

@@ -16,6 +16,11 @@ struct Pixel {
 
     Pixel(uint8_t r, uint8_t g, uint8_t b): r(r), g(g), b(b) {}
 
+    [[nodiscard]] inline uint64_t sqr_sum() const {
+        uint64_t u_r = r, u_g = g, u_b = b;
+        return u_r * u_r + u_g * u_g + u_b * u_b;
+    }
+
     [[nodiscard]] int distance(const Pixel &pixel) const {
         int r_d = static_cast<int> (r) - pixel.r;
         int g_d = static_cast<int> (g) - pixel.g;
@@ -32,46 +37,6 @@ struct Pixel {
 };
 
 static_assert(sizeof(Pixel) == 3);
-
-
-#pragma pack()
-struct ComplexPixel {
-    std::complex<double> r, g, b;
-
-    ComplexPixel() = default;
-
-    ComplexPixel(uint8_t r_real, uint8_t g_real, uint8_t b_real): r(r_real), g(g_real), b(b_real) {}
-
-    ComplexPixel(double real, double image): r(real, image), g(real, image), b(real, image) {}
-
-    ComplexPixel(const std::complex<double> &r, const std::complex<double> &g, const std::complex<double> &b):
-            r(r), g(g), b(b) {}
-
-    friend ComplexPixel operator + (const ComplexPixel &x, const ComplexPixel &y) {
-        return ComplexPixel(x.r + y.r, x.g + y.g, x.b + y.b);
-    }
-
-    friend ComplexPixel operator - (const ComplexPixel &x, const ComplexPixel &y) {
-        return ComplexPixel(x.r - y.r, x.g - y.g, x.b - y.b);
-    }
-
-    friend ComplexPixel operator * (const ComplexPixel &x, const ComplexPixel &y) {
-        return ComplexPixel(x.r * y.r, x.g * y.g, x.b * y.b);
-    }
-
-    friend ComplexPixel operator / (const ComplexPixel &x, double k) {
-        return ComplexPixel(x.r / k, x.g / k, x.b / k);
-    }
-
-    friend ComplexPixel operator * (const ComplexPixel &x, double k) {
-        return ComplexPixel(x.r * k, x.g * k, x.b * k);
-    }
-};
-
-
-[[nodiscard]] ComplexPixel to_complex_pixel(const Pixel &x) {
-    return ComplexPixel(x.r, x.g, x.b);
-}
 
 
 class Image {
@@ -123,6 +88,16 @@ public:
         assert(0 <= y and y < h);
         return data[y * w + x];
     }
+
+    [[nodiscard]] std::shared_ptr<Image> flip() const {
+        auto flipped = std::make_shared<Image>(w, h);
+        for (int y = 0, index = 0; y < h; ++ y) {
+            for (int x = 0; x < w; ++ x, ++ index) {
+                flipped->set(w - x - 1, h - y - 1, data[index]);
+            }
+        }
+        return flipped;
+    }
 };
 
 
@@ -157,6 +132,15 @@ private:
 
 public:
     Canvas(int w, int h): Image(w, h), origin(w * h) {}
+
+    [[nodiscard]] bool none_empty() const {
+        for (int i = 0; i < w * h; ++ i) {
+            if (not origin[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     [[nodiscard]] inline bool in_range(int x, int y) const {
         return 0 <= x and x < w and 0 <= y and y < h;
