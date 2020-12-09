@@ -25,14 +25,17 @@ public:
         canvas->apply(patch);
     }
 
+    // Bigger means more randomness
+    static constexpr double possibility_k = 0.3;
+
     static void entire_matching(const std::shared_ptr<Canvas> &canvas, const std::shared_ptr<Image> &texture, bool random=false, int times=100) {
         std::shared_ptr<Patch> best_patch;
-        uint64_t best_ssd = UINT64_MAX;
 
         if (random) {
             auto random_x = Random(0, canvas->w - 1);
             auto random_y = Random(0, canvas->h - 1);
 
+            uint64_t best_ssd = UINT64_MAX;
             for (int i = 0; i < times; ++ i) {
                 auto patch = std::make_shared<Patch>(texture, random_x(), random_y());
                 uint64_t ssd = canvas->ssd(patch);
@@ -48,12 +51,11 @@ public:
             auto *texture_sum = static_cast<uint64_t*> (std::malloc(texture->w * texture->h * sizeof(uint64_t)));
             auto *canvas_sum = static_cast<uint64_t*> (std::malloc(canvas->w * canvas->h * sizeof(uint64_t)));
             auto query = [](const uint64_t *sum, int x, int y, int size_x, int size_y, int w, int h) {
-                int last_x = std::min(x + size_x - 1, w - 1);
-                int last_y = std::min(y + size_y - 1, h - 1);
+                int last_x = x + size_x - 1, last_y = y + size_y - 1;
                 uint64_t result = sum[last_y * w + last_x];
                 result += (x > 0 and y > 0) ? sum[(y - 1) * w + x - 1] : 0;
                 result -= x > 0 ? sum[last_y * w + x - 1] : 0;
-                result -= y > 0 ? sum[(y - 1) * w + x] : 0;
+                result -= y > 0 ? sum[(y - 1) * w + last_x] : 0;
                 return result;
             };
             auto do_prefix_sum = [](int w, int h, Pixel *pixels, uint64_t *sum) {
@@ -81,8 +83,10 @@ public:
             dft(dft_w, dft_h, dft_space1, true);
 
             // Get results
-            for (int y = 0; y < 1; ++ y) {
-                for (int x = 0; x < 1; ++ x) {
+            uint64_t variance = texture->variance();
+            auto *possibility = static_cast<double*> (std::malloc(canvas->h * canvas->w * sizeof(double)));
+            for (int y = 0, index = 0; y < canvas->h; ++ y) {
+                for (int x = 0; x < canvas->w; ++ x, ++ index) {
                     int overlapped_w = std::min(texture->w, canvas->w - x);
                     int overlapped_h = std::min(texture->h, canvas->h - y);
                     uint64_t ssd = 0;
@@ -90,14 +94,28 @@ public:
                     ssd += query(canvas_sum, x, y, overlapped_w, overlapped_h, canvas->w, canvas->h);
                     ssd -= std::floor(2.0 * dft_space1[(texture->h + y - 1) * dft_w + texture->w + x - 1].real_sum());
                     ssd /= overlapped_w * overlapped_h;
-                    if (ssd < best_ssd) { // TODO: add possibility
-                        best_patch = std::make_shared<Patch>(texture, x, y);
-                        best_ssd = ssd;
-                    }
+                    possibility[index] = std::exp(-1.0 * ssd / (possibility_k * variance));
                 }
             }
+            double possibility_sum = 0;
+            for (int i = 0; i < canvas->h * canvas->w; ++ i) {
+                possibility_sum += possibility[i];
+            }
+            double position = Random<double>(0, 1)(), up = 0;
+            for (int y = 0, index = 0; y < canvas->h and not best_patch; ++ y) {
+                for (int x = 0; x < canvas->w; ++ x, ++ index) {
+                    possibility[index] /= possibility_sum;
+                    if (up + possibility[index] >= position) {
+                        best_patch = std::make_shared<Patch>(texture, x, y);
+                        break;
+                    }
+                    up += possibility[index];
+                }
+            }
+            assert(best_patch);
 
             // Free resources
+            std::free(possibility);
             std::free(texture_sum);
             std::free(canvas_sum);
             dft_free(dft_space1);

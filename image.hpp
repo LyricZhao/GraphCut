@@ -69,6 +69,24 @@ public:
         }
     }
 
+    [[nodiscard]] uint64_t variance() const {
+        uint64_t r = 0, g = 0, b = 0;
+        for (int i = 0; i < w * h; ++ i) {
+            r += data[i].r, g += data[i].g, b += data[i].b;
+        }
+        r /= w * h, g /= w * h, b /= w * h;
+        uint64_t var = 0;
+        auto sqr = [](uint64_t x) {
+            return x * x;
+        };
+        for (int i = 0; i < w * h; ++ i) {
+            var += sqr(std::max<uint64_t>(r, data[i].r) - std::min<uint64_t>(r, data[i].r));
+            var += sqr(std::max<uint64_t>(g, data[i].g) - std::min<uint64_t>(g, data[i].g));
+            var += sqr(std::max<uint64_t>(b, data[i].b) - std::min<uint64_t>(b, data[i].b));
+        }
+        return var / (w * h);
+    }
+
     void write(const std::string &path) const {
         assert(data);
         if (not stbi_write_png(path.c_str(), w, h, 3, reinterpret_cast<uint8_t*>(data), 0)) {
