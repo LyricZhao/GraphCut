@@ -3,7 +3,7 @@
 
 # JetBrains
 .idea
-cmake-build-*
 
-# Images
-images/outputs/*
+# CMake builds
+cmake-build-*
+build
