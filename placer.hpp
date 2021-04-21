@@ -8,6 +8,7 @@
 class Placer {
 public:
     static void init(const std::shared_ptr<Canvas> &canvas, const std::shared_ptr<Image> &texture) {
+        // apply patches on canvas
         auto random_y = Random(texture->h / 3, texture->h * 2 / 3);
         auto random_x = Random(texture->w / 3, texture->w * 2 / 3);
         for (int y = 0; y < canvas->h; y += random_y()) {
