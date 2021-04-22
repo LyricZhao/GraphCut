@@ -1,7 +1,7 @@
 #pragma once
 
 #include <queue>
-
+#include <cassert>
 
 struct Edge {
     int v, next, capacity;

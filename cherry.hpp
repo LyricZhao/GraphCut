@@ -8,8 +8,8 @@
 #include <random>
 #include <set>
 #include <string>
+#include <cstring>
 #include <type_traits>
-
 
 // Returning a const value is not recommended by Clang-Tidy for readability, but for functionality we need it
 #pragma ide diagnostic ignored "readability-const-return-type"
